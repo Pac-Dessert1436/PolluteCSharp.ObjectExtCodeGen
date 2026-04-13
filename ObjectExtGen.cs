@@ -236,12 +236,11 @@ public sealed class ObjectExtensionAttribute : Attribute
     /// and namespaces of all referenced types.
     /// </remarks>
     private static void Execute(
-        ImmutableArray<MethodWithUsings?> methods,
-        ImmutableArray<PropertyWithUsings?> properties,
-        SourceProductionContext context)
+    ImmutableArray<MethodWithUsings?> methods,
+    ImmutableArray<PropertyWithUsings?> properties,
+    SourceProductionContext context)
     {
         var code = new System.Text.StringBuilder();
-
         var allUsings = new HashSet<string>();
         var allNamespaces = new HashSet<string>();
 
@@ -284,63 +283,90 @@ public sealed class ObjectExtensionAttribute : Attribute
             code.AppendLine($"using {namespaceName};");
         }
 
-        code.AppendLine();
-        code.AppendLine(AttributeCode);
+        code.AppendLine('\n' + AttributeCode);
         code.AppendLine();
         code.AppendLine("public static class ObjectExtensions");
         code.AppendLine("{");
         code.AppendLine("    extension(object)");
         code.AppendLine("    {");
 
+        // Improved method generation with attribute filtering
         foreach (var method in methods)
         {
             if (method is null) continue;
 
-            var modifiers = method.Method.Modifiers
-                .Where(m => !m.IsKind(SyntaxKind.StaticKeyword))
-                .Select(m => m.ToString());
+            // Filter out ObjectExtensionAttribute but keep all others
+            var filteredAttributes = method.Method.AttributeLists
+                .Select(list => SyntaxFactory.AttributeList(
+                    SyntaxFactory.SeparatedList(
+                        list.Attributes.Where(attr => !IsObjectExtensionAttribute(attr))
+                    )
+                ))
+                .Where(list => list.Attributes.Count > 0)
+                .ToList();
 
-            string methodBody = 
-                string.Concat(from line in method.Method.Body?.NormalizeWhitespace().ToString().Split('\n')
-                              select $"        {line}");
-            string fallbackBody =
-                new string(' ', 4) + method.Method.ExpressionBody?.ToString() + ';' ?? 
-                throw new NotImplementedException();
-            code.AppendLine($"        {string.Join(" ", modifiers)} static {method.Method.ReturnType} {method.Method.Identifier}{method.Method.ParameterList}");
-            code.AppendLine(string.IsNullOrEmpty(methodBody) ? fallbackBody : methodBody);
+            // Remove static keyword from modifiers
+            var newModifiers = method.Method.Modifiers
+                .Where(m => !m.IsKind(SyntaxKind.StaticKeyword));
+
+            // Rebuild method with filtered attributes and without static
+            var newMethod = method.Method
+                .WithAttributeLists(SyntaxFactory.List(filteredAttributes))
+                .WithModifiers(SyntaxFactory.TokenList(newModifiers))
+                .WithLeadingTrivia(SyntaxFactory.Whitespace("        "));
+
+            // Format and add to output
+            var formattedMethod = newMethod.NormalizeWhitespace();
+            string methodText = formattedMethod.ToString();
+
+            var indentedLines = methodText.Split('\n').Select(line => new string('\t', 2) + line);
+
+            code.AppendLine(string.Join("\n", indentedLines));
             code.AppendLine();
         }
 
+        // Improved property generation with attribute filtering
         foreach (var property in properties)
         {
             if (property is null) continue;
 
-            var modifiers = property.Property.Modifiers
-                .Where(m => !m.IsKind(SyntaxKind.StaticKeyword))
-                .Select(m => m.ToString());
+            // Filter out ObjectExtensionAttribute but keep all others
+            var filteredAttributes = property.Property.AttributeLists
+                .Select(list => SyntaxFactory.AttributeList(
+                    SyntaxFactory.SeparatedList(
+                        list.Attributes.Where(attr => !IsObjectExtensionAttribute(attr))
+                    )
+                ))
+                .Where(list => list.Attributes.Count > 0)
+                .ToList();
 
-            code.AppendLine($"        {string.Join(" ", modifiers)} static {property.Property.Type} {property.Property.Identifier}");
-            code.AppendLine("        {");
-            if (property.Property.AccessorList is not null)
-            {
-                foreach (var accessor in property.Property.AccessorList.Accessors)
-                {
-                    code.AppendLine($"            {accessor}");
-                }
-            }
-            else if (property.Property.ExpressionBody is not null)
-            {
-                code.AppendLine($"            get => {property.Property.ExpressionBody.Expression};");
-            }
-            string defaultValueExpr = 
-                property.Property.Initializer is not null
-                ? $" = {property.Property.Initializer.Value};" : string.Empty;
-            code.AppendLine($"        }}{defaultValueExpr}");
+            var newModifiers = property.Property.Modifiers
+                .Where(m => !m.IsKind(SyntaxKind.StaticKeyword));
+
+            var newProperty = property.Property
+                .WithAttributeLists(SyntaxFactory.List(filteredAttributes))
+                .WithModifiers(SyntaxFactory.TokenList(newModifiers))
+                .WithLeadingTrivia(SyntaxFactory.Whitespace("        "));
+
+            var formattedProperty = newProperty.NormalizeWhitespace();
+            string propertyText = formattedProperty.ToString();
+
+            var indentedLines = propertyText.Split('\n').Select(line => new string('\t', 2) + line);
+
+            code.AppendLine(string.Join("\n", indentedLines));
+            code.AppendLine();
         }
 
         code.AppendLine("    }");
         code.AppendLine("}");
 
         context.AddSource("ObjectExtensions.g.cs", code.ToString());
+    }
+
+    // Helper method to check if an attribute is ObjectExtensionAttribute
+    private static bool IsObjectExtensionAttribute(AttributeSyntax attribute)
+    {
+        var name = attribute.Name.ToString();
+        return name == "ObjectExtension" || name == "ObjectExtensionAttribute";
     }
 }
