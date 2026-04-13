@@ -301,11 +301,13 @@ public sealed class ObjectExtensionAttribute : Attribute
                 .Select(m => m.ToString());
 
             string methodBody = 
-                method.Method.Body?.ToString() ?? 
+                string.Concat(from line in method.Method.Body?.NormalizeWhitespace().ToString().Split('\n')
+                              select $"        {line}");
+            string fallbackBody =
                 new string(' ', 4) + method.Method.ExpressionBody?.ToString() + ';' ?? 
                 throw new NotImplementedException();
             code.AppendLine($"        {string.Join(" ", modifiers)} static {method.Method.ReturnType} {method.Method.Identifier}{method.Method.ParameterList}");
-            code.AppendLine($"        {methodBody}");
+            code.AppendLine(string.IsNullOrEmpty(methodBody) ? fallbackBody : methodBody);
             code.AppendLine();
         }
 
