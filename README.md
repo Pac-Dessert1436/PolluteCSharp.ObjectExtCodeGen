@@ -1,4 +1,4 @@
-# `PolluteCSharp.ObjectExtCodeGen` - Injects Static Methods to Every Type in Your Codebase
+# `PolluteCSharp.ObjectExtCodeGen` - Injects Static Members to Every Type in Your Codebase
 
 > **⚠️ WARNING**: This is a joke project. DO NOT use it in production code!
 >
@@ -16,14 +16,14 @@ With great power comes great responsibility... and the ability to pollute your e
 
 This is a **Source Generator** that abuses .NET 10's `extension(...)` syntax to inject static methods and properties into **the entire type system** (classes, structs, interfaces, etc.) in your C# codebase. It's a creative exploration of how far we can push the new extension syntax - and a reminder that just because you *can* do something doesn't mean you *should*!
 
-Inspired by VB.NET's bare method calls and C#'s brand new `extension(...)` syntax in .NET 10 SDK, this package allows you to add properties or methods to objects - be careful with adding extra static members to the type system in your codebase!
+Inspired by VB.NET's bare method calls and C#'s brand new `extension(...)` syntax in .NET 10 SDK, this package allows you to add static properties or methods to objects - be careful with adding extra static members to the type system in your codebase!
 
 ## 🔧 How it works
 
 1. Add the `[ObjectExtension]` attribute to any static method or property in your code
-2. The source generator scans your codebase and collects all marked members
+2. The source generator scans your codebase and collects all marked static members
 3. It generates an `extension(object)` block containing all those members
-4. Suddenly, **the entire type system** (classes, structs, interfaces, etc.) in your codebase has those methods/properties available
+4. Suddenly, **the entire type system** (classes, structs, interfaces, etc.) in your codebase has those static methods/properties available
 
 ## 💻 Usage
 
