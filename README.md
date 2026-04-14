@@ -2,7 +2,7 @@
 
 > **⚠️ WARNING**: This is a joke project. DO NOT use it in production code!
 >
-> Besides, this project is not planned to be released as a NuGet package. See the **[Installation](#installation)** section for details.
+> Besides, this project is not planned to be released as a NuGet package. See the **[Installation](#️-installation)** section for details.
 
 With great power comes great responsibility... and the ability to pollute your entire codebase. This project abuses .NET 10's new `extension(...)` syntax more than you can imagine. **Use with extreme caution**.
 
